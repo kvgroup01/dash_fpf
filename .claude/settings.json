@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm -v)",
+      "Bash(git --version)",
+      "Bash(docker --version)",
+      "Bash(npm view *)",
+      "Bash(npx --yes create-next-app@16.2.10 . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --turbopack --yes)",
+      "Bash(npx --yes create-next-app@16.2.10 --help)",
+      "Read(//c/Users/SCVP-AUXTRAF/Desktop/**)",
+      "Bash(npx --yes create-next-app@16.2.10 projeto-fpf-scaffold --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --turbopack --yes)",
+      "Bash(npx --yes shadcn@latest init -y -b neutral)",
+      "Bash(npm run *)"
+    ]
+  }
+}
