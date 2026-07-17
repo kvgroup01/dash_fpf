@@ -191,8 +191,9 @@ supabase gen types typescript --linked > src/types/database.types.ts
 - [ ] Fase 6 — Refino mobile + performance
 - [ ] Fase 7 — Auditoria de segurança final + deploy de produção
 
-Plano completo com detalhes de cada fase:
-`C:\Users\SCVP-AUXTRAF\.claude\plans\voc-meu-parceiro-bright-castle.md`
+Plano completo com detalhes de cada fase: [`PLANO.md`](./PLANO.md) — vive no
+repositório (não num caminho local), então acompanha o projeto em qualquer
+máquina.
 
 ## 12. Pitfalls conhecidos
 
