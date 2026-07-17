@@ -182,7 +182,7 @@ supabase gen types typescript --linked > src/types/database.types.ts
 ## 11. Estado do projeto
 
 - [x] Fase 0 — Scaffold + design system + CLAUDE.md + deploy-esqueleto
-- [ ] Fase 0.5 — Schema completo + RLS + Supabase Vault
+- [x] Fase 0.5 — Schema completo + RLS + Supabase Vault
 - [ ] Fase 1 — Auth + Configurações (contas Meta)
 - [ ] Fase 2 — Sync Meta assíncrono + Aba 1
 - [ ] Fase 3 — Fontes + colagem em lote + Aba 2
@@ -207,3 +207,24 @@ Plano completo com detalhes de cada fase:
   `supabase start`.
 - GitHub: repositório é criado manualmente pelo usuário no github.com (sem `gh`
   CLI instalado nesta máquina); o agente configura o remote e faz o push depois.
+- **Conexão com o Postgres remoto**: o host de conexão direta
+  (`db.<ref>.supabase.co`) só resolve em IPv6, sem rota funcional nesta máquina.
+  Use sempre a **connection string do pooler** (Session pooler, porta 5432,
+  formato `postgres.<ref>:<senha>@aws-0-<região>.pooler.supabase.com:5432`) via
+  `supabase db push --db-url "..."`. Sem Docker nem `supabase login` feito,
+  `supabase link` e `gen types --linked/--project-id` não funcionam (pedem
+  access token); `db push --db-url` funciona porque fala direto com o Postgres,
+  sem passar pela Management API.
+- `supabase gen types typescript --db-url` **também não funciona sem Docker**
+  (ele sobe um container de introspecção). `src/types/database.types.ts` foi
+  escrito à mão a partir das migrations — está correto, mas regenerar com o
+  comando oficial assim que houver `supabase login` ou Docker disponível.
+- **Gotcha de segurança já mordido uma vez**: toda função nova em `public`
+  recebe `EXECUTE` para `anon`/`authenticated` automaticamente via
+  `ALTER DEFAULT PRIVILEGES` do Supabase — `revoke ... from public` **não**
+  revoga isso, porque o grant é feito direto às roles, não via `PUBLIC`.
+  Qualquer RPC nova sensível (ex.: outra função tipo `save_secret`/`get_secret`)
+  precisa de `revoke execute on function ... from anon, authenticated;`
+  explícito, senão o RPC fica publicamente chamável mesmo com `security definer`
+  e RLS em dia. Testado e confirmado do jeito difícil em
+  `20260717212000_fix_vault_rpc_grants.sql`.
