@@ -52,5 +52,9 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  // Além de api/_next/favicon, exclui qualquer request com extensão de
+  // arquivo (imagens e outros assets estáticos em public/, ex.: logo em
+  // public/brand/) — sem isso o proxy também intercepta esses arquivos e
+  // redireciona pro /login quando não há sessão, quebrando o carregamento.
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.\\w+$).*)"],
 };

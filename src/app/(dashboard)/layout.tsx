@@ -3,6 +3,7 @@ import { LogOut, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardNav } from "@/components/nav/dashboard-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Logo } from "@/components/logo";
 import { logout } from "./actions";
 
 export default function DashboardLayout({
@@ -15,14 +16,9 @@ export default function DashboardLayout({
       <header className="glass-surface sticky top-0 z-10 border-b">
         <div className="mx-auto max-w-7xl px-4 py-3 md:px-6">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-sm font-semibold tracking-tight text-primary">
-                FPF
-              </span>
-              <span className="hidden text-sm text-muted-foreground sm:inline">
-                Dashboard de Performance
-              </span>
-            </div>
+            <Link href="/anuncios" className="flex items-center">
+              <Logo className="h-7 sm:h-8" />
+            </Link>
             <DashboardNav className="hidden md:flex" />
             <div className="flex items-center gap-1">
               <Button

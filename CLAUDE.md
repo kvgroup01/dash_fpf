@@ -55,6 +55,12 @@ supabase gen types typescript --linked > src/types/database.types.ts
   Toda tela de dashboard se monta com eles.
 - `src/components/glass/` — `<GlassSurface level="surface|card|popover">`, wrapper
   genérico pros casos que não são um `BentoCard`.
+- `src/components/logo.tsx` — `<Logo>` usado no header e na tela de login.
+  Logo original (`public/brand/fpf-logo-animated.webp`, 65 frames) tem
+  letreiro escuro pensado pra fundo claro; a versão usada no app
+  (`public/brand/fpf-logo.png`) é a última frame recortada e com o fundo
+  removido (chroma-key), envolvida num selo branco fixo no componente — sem
+  o selo o texto desaparece no tema escuro.
 - `src/lib/supabase/{client,server,admin}.ts` — **`admin.ts` é o único arquivo
   autorizado a instanciar cliente com `service_role`**. Nunca importar de Client
   Component.
@@ -91,6 +97,12 @@ supabase gen types typescript --linked > src/types/database.types.ts
     **`src/proxy.ts`** (irmão de `src/app`), não na raiz do projeto — colocar
     na raiz faz o Next.js simplesmente não compilar/rodar o proxy, sem erro
     nenhum (mordido na Fase 1: rota ficava aberta sem sessão e não avisava).
+  - O `matcher` do proxy precisa excluir qualquer arquivo estático novo em
+    `public/` (ex.: `public/brand/*`), não só `_next/static`/`_next/image` —
+    senão o proxy redireciona a própria imagem pra `/login` quando não há
+    sessão (e o otimizador de imagem do Next recebe HTML em vez do arquivo,
+    erro "isn't a valid image"). Padrão usado:
+    `.*\.\w+$` como negative lookahead extra no matcher.
   - `cookies()`, `headers()`, `params`, `searchParams` são sempre assíncronos
     (`await`) — não há mais acesso síncrono.
   - `revalidateTag` agora exige um segundo argumento (`cacheLife` profile).
