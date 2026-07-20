@@ -84,7 +84,13 @@ supabase gen types typescript --linked > src/types/database.types.ts
   oficial — não assumir pelo que já foi visto em projetos Next mais antigos.
   Exemplos já mapeados neste projeto:
   - `middleware.ts` foi renomeado para **`proxy.ts`** (export `proxy`, não
-    `middleware`). Vamos usar `proxy.ts` desde a Fase 1.
+    `middleware`) e roda **só server-side** — Server Functions ignoram o
+    matcher dele, então cada Server Action sensível ainda precisa checar a
+    sessão por conta própria (`requireUser()` nas actions de
+    `configuracoes/contas`, por exemplo). Com `--src-dir`, o arquivo vai em
+    **`src/proxy.ts`** (irmão de `src/app`), não na raiz do projeto — colocar
+    na raiz faz o Next.js simplesmente não compilar/rodar o proxy, sem erro
+    nenhum (mordido na Fase 1: rota ficava aberta sem sessão e não avisava).
   - `cookies()`, `headers()`, `params`, `searchParams` são sempre assíncronos
     (`await`) — não há mais acesso síncrono.
   - `revalidateTag` agora exige um segundo argumento (`cacheLife` profile).
@@ -134,6 +140,16 @@ supabase gen types typescript --linked > src/types/database.types.ts
 - Cadastro público desligado (painel Auth do Supabase + nenhuma rota de signup
   exposta na UI).
 - Validar toda entrada no servidor, inclusive as colagens em lote da Aba 2.
+- **Auth é por código único, não login por usuário** (decisão do cliente na
+  Fase 1: o link vai ser compartilhado com o cliente final, que só quer um
+  código, não cadastro). Por baixo continua sendo uma sessão real do Supabase
+  Auth — o código é a senha de um usuário fixo (`SHARED_LOGIN_EMAIL` em
+  `src/app/(auth)/login/actions.ts`). **Não trocar as policies de RLS para
+  `to anon`** para "simplificar" — isso abriria as tabelas pra qualquer um com
+  a chave `anon` (pública, vai no bundle do browser), sem precisar nem do
+  código. A proteção real é a sessão `authenticated`, não o código em si.
+  Se algum dia precisar isolar dados por cliente (múltiplos códigos, cada um
+  vendo só a própria Ação), isso exige RLS por linha, não só um código a mais.
 
 ## 8. Glossário do domínio
 
@@ -183,7 +199,7 @@ supabase gen types typescript --linked > src/types/database.types.ts
 
 - [x] Fase 0 — Scaffold + design system + CLAUDE.md + deploy-esqueleto
 - [x] Fase 0.5 — Schema completo + RLS + Supabase Vault
-- [ ] Fase 1 — Auth + Configurações (contas Meta)
+- [x] Fase 1 — Auth + Configurações (contas Meta)
 - [ ] Fase 2 — Sync Meta assíncrono + Aba 1
 - [ ] Fase 3 — Fontes + colagem em lote + Aba 2
 - [ ] Fase 4 — Ações + cruzamento + Aba 3

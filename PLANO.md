@@ -27,7 +27,13 @@ Stack: Next.js 16 (App Router) + Supabase (Postgres + Auth) + GitHub + Vercel.
   `update_secret`), clientes Supabase (`client.ts`/`server.ts`/`admin.ts`).
   Testado manualmente: RLS bloqueia `anon`, libera `service_role`; RPCs do
   Vault negam `anon` (401).
-- [ ] Fase 1 em diante — abaixo.
+- [x] **Fase 1** — Auth por código único (não login por usuário — decisão do
+  cliente, ver CLAUDE.md seção 7), `proxy.ts` protegendo `(dashboard)`, CRUD
+  completo de `meta_ad_accounts` com token no Vault, "Testar conexão" real
+  contra a Graph API, tela de settings gerais. Testado ponta a ponta com
+  Playwright (login, CRUD, teste de conexão retornando erro real da Meta
+  para um token inválido, logout).
+- [ ] Fase 2 em diante — abaixo.
 
 **Setup necessário numa máquina nova:**
 1. `git clone` do repositório, `npm install`.
@@ -49,11 +55,17 @@ Stack: Next.js 16 (App Router) + Supabase (Postgres + Auth) + GitHub + Vercel.
 
 ---
 
-## Fase 1 — Auth + RLS de acesso + Configurações (contas Meta)
+## Fase 1 — Auth + RLS de acesso + Configurações (contas Meta) ✅ concluída
 
-- Supabase Auth (email/senha), signup público **desligado** no painel Auth
-  **e** sem nenhuma rota de signup exposta na UI.
-- `proxy.ts` (não `middleware.ts` — renomeado no Next.js 16) com
+- ~~Supabase Auth (email/senha)~~ — trocado por **código único** a pedido do
+  cliente (o link é compartilhado com o cliente final, que só quer um
+  código, não cadastro). Por baixo é uma sessão real do Supabase Auth: o
+  código é a senha de um usuário fixo (`SHARED_LOGIN_EMAIL` em
+  `src/app/(auth)/login/actions.ts`) — a RLS continua exigindo
+  `authenticated`, nunca mudar para `to anon`. Signup público **desligado**
+  no painel Auth **e** sem nenhuma rota de signup exposta na UI.
+- `proxy.ts` (não `middleware.ts` — renomeado no Next.js 16; **com
+  `--src-dir` precisa ficar em `src/proxy.ts`**, não na raiz) com
   `@supabase/ssr` protegendo todas as rotas de `(dashboard)`.
 - Tela Configurações → Contas: CRUD de `meta_ad_accounts` (label,
   ad_account_id, token, `data_inicio`, timezone, janela de atribuição, ativo)

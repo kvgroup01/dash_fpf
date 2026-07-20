@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { Settings } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardNav } from "@/components/nav/dashboard-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { logout } from "./actions";
 
 export default function DashboardLayout({
   children,
@@ -31,11 +32,22 @@ export default function DashboardLayout({
                 className="h-11 w-11"
                 aria-label="Configurações"
               >
-                <Link href="/configuracoes/contas">
+                <Link href="/configuracoes">
                   <Settings className="size-5" />
                 </Link>
               </Button>
               <ThemeToggle />
+              <form action={logout}>
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  size="icon"
+                  className="h-11 w-11"
+                  aria-label="Sair"
+                >
+                  <LogOut className="size-5" />
+                </Button>
+              </form>
             </div>
           </div>
           <DashboardNav className="mt-2 md:hidden" />
