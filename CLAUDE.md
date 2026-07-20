@@ -211,6 +211,20 @@ supabase gen types typescript --linked > src/types/database.types.ts
   `use_unified_attribution_setting=true` sempre, sem passar
   `action_attribution_windows` manual — usa a janela já configurada na
   conta no Gerenciador, é o que faz os números baterem.
+- **Gotcha sério já mordido**: uma function Postgres declarada `returns
+  public.minha_tabela` (linha única, não `setof`) que não encontra nada pra
+  retornar (`RETURNING` de um `UPDATE` que não bateu em nenhuma linha) não
+  vira `null` no JSON — o PostgREST serializa o composite nulo como um
+  objeto com **todos os campos `null`** (`{"id": null, "status": null, ...}`),
+  que é *truthy* em JS. `claim_next_meta_sync_job()` retorna assim quando não
+  há job elegível. Um `if (!job) break` não pega isso — precisa checar
+  `!job?.id` (ou qualquer coluna `not null`). Sem essa checagem, a rota de
+  cron entrava num loop rápido chamando `processJob` com um job todo `null`,
+  que falhava rápido em cada volta (por isso não estourava rate limit da
+  Meta, só desperdiçava — mas ainda assim é bug real, corrigido em
+  `src/app/api/cron/process-meta-jobs/route.ts`). Motivo pra sempre testar
+  explicitamente o caminho "fila vazia" de qualquer RPC que devolve linha
+  única, não só o caminho feliz.
 - **CRON_SECRET usado pelo `pg_cron`/`pg_net` fica no Supabase Vault**
   (`save_secret('cron_secret', ...)`), lido dinamicamente dentro do job SQL
   via `vault.decrypted_secrets` — nunca em texto puro numa migration

@@ -33,9 +33,15 @@ async function getToken(admin: AdminClient, secretId: string): Promise<string> {
   return data;
 }
 
+function logUpdateError(context: string, jobId: string, error: { message: string } | null) {
+  if (error) {
+    console.error(`[meta-sync] falha ao atualizar job ${jobId} (${context}): ${error.message}`);
+  }
+}
+
 async function markThrottled(admin: AdminClient, job: SyncJob, message: string) {
   const attempt = job.attempt_count + 1;
-  await admin
+  const { error } = await admin
     .from("meta_sync_jobs")
     .update({
       status: "throttled",
@@ -44,13 +50,15 @@ async function markThrottled(admin: AdminClient, job: SyncJob, message: string) 
       next_poll_at: inSeconds(computeBackoffSeconds(attempt)),
     })
     .eq("id", job.id);
+  logUpdateError("throttled", job.id, error);
 }
 
 async function markError(admin: AdminClient, job: SyncJob, message: string) {
-  await admin
+  const { error } = await admin
     .from("meta_sync_jobs")
     .update({ status: "error", last_error: message })
     .eq("id", job.id);
+  logUpdateError("error", job.id, error);
 }
 
 async function recordRateLimit(
@@ -178,7 +186,7 @@ export async function processJob(admin: AdminClient, job: SyncJob): Promise<void
       );
       await recordRateLimit(admin, account.id, rateLimit);
 
-      await admin
+      const { error: e1 } = await admin
         .from("meta_sync_jobs")
         .update({
           status: "polling",
@@ -187,6 +195,7 @@ export async function processJob(admin: AdminClient, job: SyncJob): Promise<void
           attempt_count: 0,
         })
         .eq("id", job.id);
+      logUpdateError("fase1->polling", job.id, e1);
       return;
     }
 
@@ -198,10 +207,11 @@ export async function processJob(admin: AdminClient, job: SyncJob): Promise<void
       await recordRateLimit(admin, account.id, status.rateLimit);
 
       if (status.async_status === "Job Completed") {
-        await admin
+        const { error: e2 } = await admin
           .from("meta_sync_jobs")
           .update({ status: "processing", cursor: { upserted: 0 } })
           .eq("id", job.id);
+        logUpdateError("fase2->processing", job.id, e2);
         return;
       }
 
@@ -210,10 +220,11 @@ export async function processJob(admin: AdminClient, job: SyncJob): Promise<void
         return;
       }
 
-      await admin
+      const { error: e3 } = await admin
         .from("meta_sync_jobs")
         .update({ status: "polling", next_poll_at: inSeconds(POLL_INTERVAL_SECONDS) })
         .eq("id", job.id);
+      logUpdateError("fase2->polling", job.id, e3);
       return;
     }
 
@@ -225,7 +236,7 @@ export async function processJob(admin: AdminClient, job: SyncJob): Promise<void
     const totalUpserted = (cursor?.upserted ?? 0) + upsertedNow;
 
     if (page.hasNext && page.after) {
-      await admin
+      const { error: e4 } = await admin
         .from("meta_sync_jobs")
         .update({
           status: "processing",
@@ -233,8 +244,9 @@ export async function processJob(admin: AdminClient, job: SyncJob): Promise<void
           next_poll_at: new Date().toISOString(),
         })
         .eq("id", job.id);
+      logUpdateError("fase3->proxima pagina", job.id, e4);
     } else {
-      await admin
+      const { error: e5 } = await admin
         .from("meta_sync_jobs")
         .update({
           status: "done",
@@ -242,6 +254,7 @@ export async function processJob(admin: AdminClient, job: SyncJob): Promise<void
           stats: { linhas: totalUpserted },
         })
         .eq("id", job.id);
+      logUpdateError("fase3->done", job.id, e5);
     }
   } catch (e) {
     if (e instanceof MetaGraphApiError) {

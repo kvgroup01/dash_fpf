@@ -8,6 +8,12 @@ export const maxDuration = 120;
 const TIME_BUDGET_MS = 90_000;
 /** Intervalo de espera quando um job desta invocação está "polling" e ainda não venceu next_poll_at. */
 const IDLE_RETRY_MS = 3_000;
+/**
+ * Disjuntor: nenhum cenário legítimo (nem paginar um relatório de milhares
+ * de linhas a 500/página) deveria bater nisso dentro do orçamento de tempo —
+ * se bater, é sinal de um job girando sem progredir, não de volume real.
+ */
+const MAX_ITERATIONS = 500;
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -36,15 +42,19 @@ export async function POST(request: Request) {
   const start = Date.now();
   let processed = 0;
   let hasActiveWork = false;
+  const lastJobIds: string[] = [];
 
-  while (Date.now() - start < TIME_BUDGET_MS) {
+  while (Date.now() - start < TIME_BUDGET_MS && processed < MAX_ITERATIONS) {
     const { data: job, error } = await admin.rpc("claim_next_meta_sync_job");
 
     if (error) {
       return Response.json({ processed, error: error.message }, { status: 500 });
     }
 
-    if (!job) {
+    // Quando não há job elegível, a function SQL retorna um composite nulo,
+    // que o PostgREST serializa como {id: null, ...} — um objeto truthy em
+    // JS, não um null de verdade. Checar job.id, não só job.
+    if (!job || !job.id) {
       const remaining = TIME_BUDGET_MS - (Date.now() - start);
       if (!hasActiveWork || remaining <= IDLE_RETRY_MS) break;
       await sleep(IDLE_RETRY_MS);
@@ -54,6 +64,15 @@ export async function POST(request: Request) {
     hasActiveWork = true;
     await processJob(admin, job);
     processed += 1;
+
+    lastJobIds.push(job.id);
+    if (lastJobIds.length > 20) lastJobIds.shift();
+  }
+
+  if (processed >= MAX_ITERATIONS) {
+    console.error(
+      `[meta-sync] disjuntor acionado (${MAX_ITERATIONS} iterações) — últimos jobs: ${lastJobIds.join(", ")}`
+    );
   }
 
   return Response.json({ processed });
