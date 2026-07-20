@@ -202,8 +202,32 @@ supabase gen types typescript --linked > src/types/database.types.ts
   `X-Business-Use-Case-Usage` e pausar contas acima de ~75% de uso.
 - Sync assíncrono da Meta é uma state machine em Postgres (`meta_sync_jobs`),
   acordada a cada 1 min por `pg_cron`/`pg_net` — o Vercel Cron não tem
-  granularidade suficiente pra fazer polling de `report_run_id`. Ver Fase 2 do
-  plano.
+  granularidade suficiente pra fazer polling de `report_run_id`. Implementada
+  na Fase 2 e validada com dados reais (ver seção 11). A fase a retomar
+  (iniciar relatório / checar status / paginar) é deduzida de
+  `meta_report_run_id`/`cursor` no job, nunca do campo `status` — `status`
+  é só pra exibição/elegibilidade de claim. `status = 'throttled'` não é uma
+  fase própria, é o mesmo job de antes com `next_poll_at` empurrado.
+  `use_unified_attribution_setting=true` sempre, sem passar
+  `action_attribution_windows` manual — usa a janela já configurada na
+  conta no Gerenciador, é o que faz os números baterem.
+- **CRON_SECRET usado pelo `pg_cron`/`pg_net` fica no Supabase Vault**
+  (`save_secret('cron_secret', ...)`), lido dinamicamente dentro do job SQL
+  via `vault.decrypted_secrets` — nunca em texto puro numa migration
+  (migrations são versionadas no git). Trocar o valor: `update_secret` no
+  Vault, não precisa nova migration. O valor também precisa estar em
+  `CRON_SECRET` nas env vars da Vercel (é comparado em
+  `src/app/api/cron/process-meta-jobs/route.ts`) — os dois têm que bater.
+- **"Resultado" (MVP da Fase 2)**: conjunto fixo de `action_types` (`lead`,
+  `offsite_conversion.fb_pixel_lead`, `onsite_conversion.lead_grouped`,
+  `onsite_conversion.messaging_conversation_started_7d`) somado direto nas
+  RPCs `get_meta_ads_report`/`get_meta_daily_totals`. A definição
+  configurável por conta/ação do brief original fica pra quando as Ações
+  existirem (Fase 4).
+- **Ranking de criativos/públicos (Fase 2) não tem thumbnail** — usa só
+  `ad_name`/`adset_name` já desnormalizados em `meta_insights_daily`. Buscar
+  thumbnail exige sincronizar `meta_entities.creative` separadamente (outro
+  endpoint da Graph API por entidade) — deferido, não implementado ainda.
 - Google Sheets API: leitura read-only via service account, cota a respeitar
   (fase 5).
 
@@ -212,7 +236,7 @@ supabase gen types typescript --linked > src/types/database.types.ts
 - [x] Fase 0 — Scaffold + design system + CLAUDE.md + deploy-esqueleto
 - [x] Fase 0.5 — Schema completo + RLS + Supabase Vault
 - [x] Fase 1 — Auth + Configurações (contas Meta)
-- [ ] Fase 2 — Sync Meta assíncrono + Aba 1
+- [x] Fase 2 — Sync Meta assíncrono + Aba 1
 - [ ] Fase 3 — Fontes + colagem em lote + Aba 2
 - [ ] Fase 4 — Ações + cruzamento + Aba 3
 - [ ] Fase 5 — Sync Google Sheets por link
@@ -257,3 +281,16 @@ máquina.
   explícito, senão o RPC fica publicamente chamável mesmo com `security definer`
   e RLS em dia. Testado e confirmado do jeito difícil em
   `20260717212000_fix_vault_rpc_grants.sql`.
+- **`curl -d`/`--data-raw` com acento nesta máquina corrompe o UTF-8**
+  (vira mojibake tipo "TÃ©cnica" em vez de "Técnica") — é a passagem do
+  argumento pela linha de comando no Git Bash/Windows, não o servidor. Pra
+  mandar JSON com acento via Bash aqui, gerar o body com `node -e
+  "console.log(JSON.stringify(...))"`/`fetch` em vez de literal direto no
+  `-d` do curl. Mordido corrigindo o label de uma conta na Fase 2.
+- **Rota de cron não pode fazer `while` sem pausa quando não há job
+  imediatamente elegível** — sem um `sleep` entre tentativas de claim
+  vazias, ela martela a RPC `claim_next_meta_sync_job` em loop apertado
+  esperando `next_poll_at` chegar, gastando chamadas à toa (funciona, mas
+  desperdiça). `src/app/api/cron/process-meta-jobs/route.ts` só espera
+  (`IDLE_RETRY_MS`) se já reivindicou algum job nesta invocação — se nunca
+  achou nada, desiste rápido em vez de ficar girando.

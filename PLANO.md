@@ -33,7 +33,19 @@ Stack: Next.js 16 (App Router) + Supabase (Postgres + Auth) + GitHub + Vercel.
   contra a Graph API, tela de settings gerais. Testado ponta a ponta com
   Playwright (login, CRUD, teste de conexão retornando erro real da Meta
   para um token inválido, logout).
-- [ ] Fase 2 em diante — abaixo.
+- [x] **Fase 2** — Sync assíncrono da Meta (state machine em `meta_sync_jobs`,
+  `pg_cron`/`pg_net` acordando `/api/cron/process-meta-jobs` a cada minuto,
+  `CRON_SECRET` no Vault) + Aba 1 completa (KPIs, gráfico, árvore
+  campanha→conjunto→anúncio, top criativos/públicos sem thumbnail ainda,
+  status de sync via Realtime). **Validado com as 3 contas reais da FPF**
+  (Escola Técnica, Superior, Técnico — token e IDs fornecidos pelo cliente):
+  backfill completo desde 01/09/2025 rodou de ponta a ponta pras três,
+  investimento e resultados batendo exatamente com uma chamada direta e
+  independente à Graph API (R$17.378,99 e 1.059 resultados na primeira
+  conta testada). "Resultado" configurável por conta/ação (do brief
+  original) e thumbnails de criativo ficaram pra depois — ver CLAUDE.md
+  seção 10.
+- [ ] Fase 3 em diante — abaixo.
 
 **Setup necessário numa máquina nova:**
 1. `git clone` do repositório, `npm install`.
@@ -52,6 +64,11 @@ Stack: Next.js 16 (App Router) + Supabase (Postgres + Auth) + GitHub + Vercel.
    escrito à mão em `src/types/database.types.ts` por falta de Docker/token.
 5. Repositório GitHub e projeto Vercel já existem e estão conectados — só
    dar `git push` normalmente acorda o deploy automático.
+6. `CRON_SECRET` (Fase 2) precisa estar em **dois lugares batendo**: nas env
+   vars da Vercel (`process.env.CRON_SECRET`, lido pela rota) e no Supabase
+   Vault com `name = 'cron_secret'` (lido pelo job do `pg_cron` via
+   `vault.decrypted_secrets` — ver migration `20260720170008_meta_sync_pg_cron.sql`).
+   Trocar o valor exige atualizar os dois.
 
 ---
 
@@ -83,7 +100,7 @@ falhar), login funciona, "Testar conexão" retorna nome real da conta Meta.
 
 ---
 
-## Fase 2 — Sync Meta assíncrono + Aba 1 (Gerenciador de Anúncios)
+## Fase 2 — Sync Meta assíncrono + Aba 1 (Gerenciador de Anúncios) ✅ concluída
 
 **Arquitetura de sync (state machine em Postgres — a tabela `meta_sync_jobs`
 já existe desde a Fase 0.5 — não polling via Vercel Cron, que no Hobby roda

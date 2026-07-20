@@ -677,6 +677,32 @@ export type Database = {
         Args: { secret_id: string; secret_value: string };
         Returns: undefined;
       };
+      claim_next_meta_sync_job: {
+        Args: Record<PropertyKey, never>;
+        Returns: Database["public"]["Tables"]["meta_sync_jobs"]["Row"];
+      };
+      get_meta_ads_report: {
+        Args: { p_ad_account_id: string | null; p_since: string; p_until: string };
+        Returns: {
+          campaign_id: string;
+          campaign_name: string | null;
+          adset_id: string;
+          adset_name: string | null;
+          ad_id: string;
+          ad_name: string | null;
+          spend: number;
+          impressions: number;
+          reach: number;
+          frequency: number | null;
+          clicks: number;
+          inline_link_clicks: number;
+          resultados: number;
+        }[];
+      };
+      get_meta_daily_totals: {
+        Args: { p_ad_account_id: string | null; p_since: string; p_until: string };
+        Returns: { date: string; spend: number; resultados: number }[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
