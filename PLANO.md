@@ -45,7 +45,17 @@ Stack: Next.js 16 (App Router) + Supabase (Postgres + Auth) + GitHub + Vercel.
   conta testada). "Resultado" configurável por conta/ação (do brief
   original) e thumbnails de criativo ficaram pra depois — ver CLAUDE.md
   seção 10.
-- [ ] Fase 3 em diante — abaixo.
+- [x] **Fase 3** — Fontes (CRUD em Configurações), colagem em lote (parser
+  TSV/CSV com papaparse, mapeador de colunas com sugestão automática por
+  nome, preview server-side antes de gravar, UPSERT idempotente por
+  `(source_id, chave)`) + Aba 2 completa (lista de fontes com contagem de
+  leads/sem match, tabela de leads filtrável, exportar CSV). Testado ponta a
+  ponta: colar o mesmo lote duas vezes (0 novas/3 atualizam na segunda,
+  sem duplicar), e os três casos de erro (data inválida, chave vazia, chave
+  duplicada no lote) todos detectados corretamente no preview. Cascata de
+  match de verdade (Ação/UTM/regra) fica pra Fase 4 — `match_metodo` é
+  gravado `null` por enquanto.
+- [ ] Fase 4 em diante — abaixo.
 
 **Setup necessário numa máquina nova:**
 1. `git clone` do repositório, `npm install`.
@@ -153,7 +163,7 @@ timezone/janela de atribuição).
 
 ---
 
-## Fase 3 — Fontes + colagem em lote + Aba 2 (Planilhas/Leads)
+## Fase 3 — Fontes + colagem em lote + Aba 2 (Planilhas/Leads) ✅ concluída
 
 - Parser de TSV/CSV robusto (lib madura tipo papaparse, delimiter
   auto-detect `\t`/`,`, suporta quebras de linha dentro de campos entre

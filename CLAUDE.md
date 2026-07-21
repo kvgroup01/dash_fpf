@@ -194,6 +194,13 @@ supabase gen types typescript --linked > src/types/database.types.ts
   pra criar regra.
 - Sync da Meta é **sob demanda** (botão) ou em intervalo espaçado — nunca um
   loop de request por linha, nunca polling contínuo indiscriminado.
+- **Colagem em lote (Fase 3)**: `match_metodo` fica `null` no import — a
+  cascata de match de verdade (Ação → UTM → regra manual) só existe a partir
+  da Fase 4. Até lá, "taxa de match" na Aba 2 é só uma contagem de
+  `match_metodo is null`, não uma cascata rodada. Mapeamento de coluna
+  (`lead_sources.mapeamento`) e a normalização de telefone/e-mail/data usam
+  uma única função (`src/lib/leads/import.ts`) tanto no preview quanto no
+  commit — nunca duplicar essa lógica.
 
 ## 10. Integrações externas — limites
 
@@ -251,7 +258,7 @@ supabase gen types typescript --linked > src/types/database.types.ts
 - [x] Fase 0.5 — Schema completo + RLS + Supabase Vault
 - [x] Fase 1 — Auth + Configurações (contas Meta)
 - [x] Fase 2 — Sync Meta assíncrono + Aba 1
-- [ ] Fase 3 — Fontes + colagem em lote + Aba 2
+- [x] Fase 3 — Fontes + colagem em lote + Aba 2
 - [ ] Fase 4 — Ações + cruzamento + Aba 3
 - [ ] Fase 5 — Sync Google Sheets por link
 - [ ] Fase 6 — Refino mobile + performance
