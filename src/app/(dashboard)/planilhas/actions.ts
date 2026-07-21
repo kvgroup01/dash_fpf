@@ -155,8 +155,11 @@ export async function commitImport(
     erros: summary.erros as unknown as Json,
   });
 
+  await admin.rpc("match_leads", { p_source_id: sourceId });
+
   revalidatePath("/planilhas");
   revalidatePath("/configuracoes/fontes");
+  revalidatePath("/visualizacao");
 
   return {
     success: "Importação concluída.",

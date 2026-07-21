@@ -45,6 +45,24 @@ export function SettingsForm({ settings }: { settings: Tables<"settings"> }) {
           defaultValue={settings.janela_atribuicao_padrao}
         />
       </div>
+      <div className="space-y-2">
+        <Label htmlFor="divergencia_alerta_pct">
+          Alerta de divergência Meta × Planilha (%)
+        </Label>
+        <Input
+          id="divergencia_alerta_pct"
+          name="divergencia_alerta_pct"
+          type="number"
+          min={0}
+          step="1"
+          required
+          defaultValue={settings.divergencia_alerta_pct}
+        />
+        <p className="text-xs text-muted-foreground">
+          Acima desse % de diferença entre resultados da Meta e leads da
+          planilha, a Aba 3 sinaliza em âmbar.
+        </p>
+      </div>
 
       {state?.error && (
         <p className="text-sm text-destructive" role="alert">

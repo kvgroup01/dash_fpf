@@ -55,7 +55,10 @@ Stack: Next.js 16 (App Router) + Supabase (Postgres + Auth) + GitHub + Vercel.
   duplicada no lote) todos detectados corretamente no preview. Cascata de
   match de verdade (Ação/UTM/regra) fica pra Fase 4 — `match_metodo` é
   gravado `null` por enquanto.
-- [ ] Fase 4 em diante — abaixo.
+- [x] **Fase 4** — Cascata de match determinística (`match_leads()`) + CRUD
+  de Ações + Aba 3 completa (KPIs Meta×Planilha, alerta de divergência,
+  funil, gráfico, rankings, quebras). Ver detalhes na seção da fase abaixo.
+- [ ] Fase 5 em diante — abaixo.
 
 **Setup necessário numa máquina nova:**
 1. `git clone` do repositório, `npm install`.
@@ -191,32 +194,25 @@ vez não deve duplicar linhas.
 
 ---
 
-## Fase 4 — Ações + cruzamento + Aba 3 (Visualização)
-
-- Cascata de match como **RPC determinística única** (`src/lib/leads/match.ts`
-  chamando uma function SQL — não duplicar a lógica em JS e SQL):
-  1) Ação (grupo de campanhas — sempre funciona, é o piso); 2) UTM exato ou
-  nome normalizado (sem acento/pontuação); 3) `regras_match` manual (tabela
-  já existe), com sugestão por similaridade (`pg_trgm` já habilitado desde a
-  Fase 0.5, já tem um índice GIN em `regras_match.valor_utm_campaign`). Lead
-  nunca é descartado — sem match cai num balde "sem origem identificada"
-  (`match_metodo = 'nenhum'`).
-- CRUD de `acoes`/`acao_campanhas`/`acao_fontes` (tabelas já existem);
-  seletores (Ação salva ou montagem na hora: conta→campanhas multi-select
-  com busca→fontes multi-select→período) + "Salvar como Ação".
-- KPIs lado a lado (Meta vs Planilha) via RPC/view, nunca client-side. Alerta
-  de divergência % configurável, âmbar com tooltip explicativo.
-- Funil CRM clicável (Leads→Contatado→Agendamento→Atendimento→Orçamento→
-  Fechamento→Pago), cada etapa abre a lista de leads.
-- Gráficos: investimento×leads/dia + CPL no tempo; top campanhas/
-  criativos/públicos da ação; quebras de leads; comparação entre campanhas
-  da mesma ação.
-- **Regra de honestidade** como decisão de apresentação: a UI checa o
-  `match_metodo` predominante da fonte antes de decidir se mostra breakdown
-  por campanha individual ou só o nível de grupo — nunca inventa rateio.
-
-**Verificação:** criar uma Ação real, conferir taxa de match e que CPL/CAC
-batem com conta manual.
+- [x] **Fase 4** — Cascata de match determinística em SQL (`match_leads()`,
+  Ação → UTM → `regras_match` → "sem origem identificada", nunca descarta
+  lead), CRUD de `acoes`/`acao_campanhas`/`acao_fontes`, Aba 3 completa
+  (`AcaoBuilder` com Ação salva ou montagem na hora, KPIs Meta×Planilha,
+  alerta de divergência configurável, funil CRM, gráfico leads/dia+CPL, top
+  criativos/públicos, quebras por dimensão, árvore de campanhas). `commitImport`
+  (Aba 2) agora dispara `match_leads()` automaticamente ao final de cada
+  colagem. Testado ponta a ponta no navegador (sessão autenticada real via
+  API do Supabase Auth, não só `curl` anônimo) contra os 3 fontes/943 leads
+  reais de produção: estado vazio, estado com Ação montada, alerta de
+  divergência disparando corretamente (leads da planilha muito acima dos
+  resultados da Meta pras fontes CRM, que ainda não têm nenhuma Ação
+  vinculada em produção) e a regra de honestidade escondendo a árvore por
+  campanha quando não há match individual (hoje é sempre o caso — as 3
+  fontes reais são CRM sem UTM). **Simplificação assumida nesta fase**: o
+  funil CRM não é clicável (não abre lista de leads por etapa) — mostra só
+  as contagens; o modelo de filtro da Aba 2 hoje só suporta uma fonte por
+  vez, então um drill-down de etapa×múltiplas-fontes ficaria maior que o
+  resto da fase. Fica pra Fase 6 se o cliente pedir.
 
 ---
 

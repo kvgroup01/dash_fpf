@@ -23,6 +23,7 @@ export type Database = {
           moeda_padrao: string;
           timezone_padrao: string;
           janela_atribuicao_padrao: string;
+          divergencia_alerta_pct: number;
           created_at: string;
           updated_at: string;
         };
@@ -31,6 +32,7 @@ export type Database = {
           moeda_padrao?: string;
           timezone_padrao?: string;
           janela_atribuicao_padrao?: string;
+          divergencia_alerta_pct?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -39,6 +41,7 @@ export type Database = {
           moeda_padrao?: string;
           timezone_padrao?: string;
           janela_atribuicao_padrao?: string;
+          divergencia_alerta_pct?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -702,6 +705,57 @@ export type Database = {
       get_meta_daily_totals: {
         Args: { p_ad_account_id: string | null; p_since: string; p_until: string };
         Returns: { date: string; spend: number; resultados: number }[];
+      };
+      normalize_text: {
+        Args: { input: string };
+        Returns: string;
+      };
+      match_leads: {
+        Args: { p_source_id: string | null };
+        Returns: number;
+      };
+      suggest_campaign_matches: {
+        Args: { p_valor: string; p_ad_account_id: string | null };
+        Returns: { campaign_id: string; campaign_name: string | null; score: number }[];
+      };
+      get_acao_kpis: {
+        Args: {
+          p_campaign_ids: string[];
+          p_source_ids: string[];
+          p_since: string;
+          p_until: string;
+        };
+        Returns: {
+          meta_spend: number;
+          meta_resultados: number;
+          meta_impressions: number;
+          meta_reach: number;
+          meta_clicks: number;
+          leads_total: number;
+          leads_com_match: number;
+          leads_grupo: number;
+          leads_sem_origem: number;
+          contatados: number;
+          agendamentos: number;
+          atendimentos: number;
+          orcamentos: number;
+          fechamentos: number;
+          vendas_pagas: number;
+          receita: number;
+        }[];
+      };
+      get_acao_lead_breakdown: {
+        Args: {
+          p_source_ids: string[];
+          p_dimension: string;
+          p_since: string;
+          p_until: string;
+        };
+        Returns: { valor: string; total: number }[];
+      };
+      get_acao_daily_leads: {
+        Args: { p_source_ids: string[]; p_since: string; p_until: string };
+        Returns: { dia: string; leads: number }[];
       };
     };
     Enums: Record<string, never>;

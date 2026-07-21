@@ -194,13 +194,15 @@ supabase gen types typescript --linked > src/types/database.types.ts
   pra criar regra.
 - Sync da Meta é **sob demanda** (botão) ou em intervalo espaçado — nunca um
   loop de request por linha, nunca polling contínuo indiscriminado.
-- **Colagem em lote (Fase 3)**: `match_metodo` fica `null` no import — a
-  cascata de match de verdade (Ação → UTM → regra manual) só existe a partir
-  da Fase 4. Até lá, "taxa de match" na Aba 2 é só uma contagem de
-  `match_metodo is null`, não uma cascata rodada. Mapeamento de coluna
-  (`lead_sources.mapeamento`) e a normalização de telefone/e-mail/data usam
-  uma única função (`src/lib/leads/import.ts`) tanto no preview quanto no
-  commit — nunca duplicar essa lógica.
+- **Cascata de match (Fase 4)**: `public.match_leads(p_source_id)` roda os 4
+  níveis (Ação → UTM → regra manual → nenhum) do zero a cada chamada —
+  idempotente, sempre reprocessa em vez de só cobrir o incremento.
+  `src/app/(dashboard)/planilhas/actions.ts` chama `match_leads(sourceId)`
+  automaticamente no fim de todo `commitImport`, então a taxa de match na
+  Aba 2 já reflete a cascata real, não só `match_metodo is null`. Mapeamento
+  de coluna (`lead_sources.mapeamento`) e a normalização de telefone/e-mail/
+  data usam uma única função (`src/lib/leads/import.ts`) tanto no preview
+  quanto no commit — nunca duplicar essa lógica.
 
 ## 10. Integrações externas — limites
 
@@ -239,12 +241,13 @@ supabase gen types typescript --linked > src/types/database.types.ts
   Vault, não precisa nova migration. O valor também precisa estar em
   `CRON_SECRET` nas env vars da Vercel (é comparado em
   `src/app/api/cron/process-meta-jobs/route.ts`) — os dois têm que bater.
-- **"Resultado" (MVP da Fase 2)**: conjunto fixo de `action_types` (`lead`,
-  `offsite_conversion.fb_pixel_lead`, `onsite_conversion.lead_grouped`,
+- **"Resultado" (MVP da Fase 2, mantido na Fase 4)**: conjunto fixo de
+  `action_types` (`lead`, `offsite_conversion.fb_pixel_lead`,
+  `onsite_conversion.lead_grouped`,
   `onsite_conversion.messaging_conversation_started_7d`) somado direto nas
-  RPCs `get_meta_ads_report`/`get_meta_daily_totals`. A definição
-  configurável por conta/ação do brief original fica pra quando as Ações
-  existirem (Fase 4).
+  RPCs `get_meta_ads_report`/`get_meta_daily_totals`/`get_acao_kpis`. A
+  definição configurável por conta/ação do brief original ainda não foi
+  implementada — repetida nas três RPCs, não centralizada.
 - **Ranking de criativos/públicos (Fase 2) não tem thumbnail** — usa só
   `ad_name`/`adset_name` já desnormalizados em `meta_insights_daily`. Buscar
   thumbnail exige sincronizar `meta_entities.creative` separadamente (outro
@@ -259,7 +262,7 @@ supabase gen types typescript --linked > src/types/database.types.ts
 - [x] Fase 1 — Auth + Configurações (contas Meta)
 - [x] Fase 2 — Sync Meta assíncrono + Aba 1
 - [x] Fase 3 — Fontes + colagem em lote + Aba 2
-- [ ] Fase 4 — Ações + cruzamento + Aba 3
+- [x] Fase 4 — Ações + cruzamento + Aba 3
 - [ ] Fase 5 — Sync Google Sheets por link
 - [ ] Fase 6 — Refino mobile + performance
 - [ ] Fase 7 — Auditoria de segurança final + deploy de produção
@@ -315,3 +318,26 @@ máquina.
   desperdiça). `src/app/api/cron/process-meta-jobs/route.ts` só espera
   (`IDLE_RETRY_MS`) se já reivindicou algum job nesta invocação — se nunca
   achou nada, desiste rápido em vez de ficar girando.
+- **`set search_path = ''` quebra chamada nua de função de extensão**, mesmo
+  com a extensão instalada em `public`: `unaccent(...)`/`similarity(...)`
+  dentro de uma function `SECURITY DEFINER`/`search_path=''` dão
+  `function unaccent(text) does not exist (42883)`. Precisa qualificar o
+  schema explicitamente (`public.unaccent(...)`, `public.similarity(...)`),
+  igual já se fazia pra `vault.decrypted_secrets`. Mordido em
+  `normalize_text()`/`suggest_campaign_matches()` na Fase 4.
+- **Sem browser tool neste ambiente**: testar UI de Server Component no
+  navegador aqui significa autenticar via API (`POST
+  {SUPABASE_URL}/auth/v1/token?grant_type=password` com o código único),
+  montar manualmente o cookie `sb-<project-ref>-auth-token` (valor
+  `base64-` + base64url de `JSON.stringify(session)`, ver
+  `node_modules/@supabase/ssr/dist/module/cookies.js`) e bater na rota via
+  `fetch`/`curl` com esse cookie — só assim dá pra ver a página já dentro do
+  `proxy.ts` autenticado, em vez de só o redirect pro `/login`. Usado pra
+  validar a Aba 3 (Fase 4) com dados reais de produção sem navegador gráfico
+  disponível.
+- **RPC que recebe `p_acao_id` só serve pra Ação salva** — a Aba 3 também
+  precisa funcionar pra combinação montada na hora, sem Ação nenhuma salva.
+  `get_acao_kpis`/`get_acao_lead_breakdown` (Fase 4) foram desenhadas assim
+  primeiro, depois refeitas (`drop function` + recriar) pra receber
+  `p_campaign_ids text[]`/`p_source_ids uuid[]` direto — o mesmo cálculo
+  serve os dois casos (salva ou ad-hoc) sem duplicar RPC.

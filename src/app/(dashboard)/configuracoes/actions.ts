@@ -19,6 +19,7 @@ const settingsSchema = z.object({
   moeda_padrao: z.string().trim().toUpperCase().length(3, "Use o código de 3 letras (ex.: BRL)"),
   timezone_padrao: z.string().trim().min(1, "Obrigatório"),
   janela_atribuicao_padrao: z.string().trim().min(1, "Obrigatório"),
+  divergencia_alerta_pct: z.coerce.number().min(0, "Não pode ser negativo"),
 });
 
 export type SettingsActionState = { error?: string; success?: string } | undefined;
@@ -33,6 +34,7 @@ export async function updateSettings(
     moeda_padrao: formData.get("moeda_padrao"),
     timezone_padrao: formData.get("timezone_padrao"),
     janela_atribuicao_padrao: formData.get("janela_atribuicao_padrao"),
+    divergencia_alerta_pct: formData.get("divergencia_alerta_pct"),
   });
 
   if (!parsed.success) {
