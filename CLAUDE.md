@@ -341,3 +341,15 @@ máquina.
   primeiro, depois refeitas (`drop function` + recriar) pra receber
   `p_campaign_ids text[]`/`p_source_ids uuid[]` direto — o mesmo cálculo
   serve os dois casos (salva ou ad-hoc) sem duplicar RPC.
+- **`.claude/settings.json` acumulou segredos reais em texto puro** (chaves
+  anon/service_role do Supabase, token de acesso do Meta Graph API, o
+  `CRON_SECRET`) na allowlist de comandos `curl` auto-aprovados, commitados
+  desde a Fase 1 sem ninguém perceber — `revoke`/rotação de nenhuma dessas
+  credenciais existia até a Fase 4. Motivo: cada `curl` com header
+  `Authorization`/`apikey` vira uma entrada literal na allowlist a cada vez
+  que é aprovado, e o arquivo nunca esteve no `.gitignore` (só
+  `settings.local.json` estava). Agora `.claude/settings.json` também está
+  no `.gitignore` e sem segredos — mas se precisar registrar um comando
+  `curl` com credencial no futuro, tratar como fluxo idêntico a `.env.local`:
+  nunca deixar o valor literal virar uma entrada persistida no `settings.json`
+  compartilhado do repo.
