@@ -250,6 +250,7 @@ export type Database = {
           mapeamento: Json;
           ativo: boolean;
           last_import_at: string | null;
+          webhook_secret_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -263,6 +264,7 @@ export type Database = {
           mapeamento?: Json;
           ativo?: boolean;
           last_import_at?: string | null;
+          webhook_secret_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -276,6 +278,7 @@ export type Database = {
           mapeamento?: Json;
           ativo?: boolean;
           last_import_at?: string | null;
+          webhook_secret_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
